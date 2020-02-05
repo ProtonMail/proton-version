@@ -9,17 +9,15 @@ const { logCommit, success, log, warn } = require('./lib/log')('proton-version')
 
 async function main() {
 
-  // const localConfig = getLocalProjects();
-  // const promises = Object.entries(localConfig).map(async ([ dependency, local ]) => ({
-  //   dependency,
-  //   remote: await getCommits(dependency),
-  //   local
-  // }));
+  const localConfig = getLocalProjects();
+  const promises = Object.entries(localConfig).map(async ([ dependency, local ]) => ({
+    dependency,
+    remote: await getCommits(dependency),
+    local
+  }));
 
-  // const data = await Promise.all(promises);
+  const data = await Promise.all(promises);
   success('fetch commits from API');
-
-  // return console.log(JSON.stringify(data, null, 2));
 
   const data = require('./all2.json');
 
@@ -47,16 +45,18 @@ async function main() {
     return acc;
   }, []);
 
-
+  /*
+   Ex: output
+    {
+      'design-system': true,
+      pmcrypto: true,
+      'proton-shared': false,
+      'react-components': false
+    }
+   */
   const response = await prompts(questions);
-  // return console.log(response)
-  // const response ={
-  //   'design-system': true,
-  //   pmcrypto: true,
-  //   'proton-shared': false,
-  //   'react-components': false
-  // };
 
+  // Find active npm links
   const { stdout } = await bash(`find node_modules -maxdepth 1 -type l`);
   const activeNpmLinks = stdout.split('\n').filter(Boolean);
   if (activeNpmLinks.length) {
@@ -92,7 +92,7 @@ async function main() {
     }
   }
 
-
+  // Houston, we have something to update
   if (Object.values(response).filter(Boolean).length){
 
     for (const [dependency, runUpdate] of Object.entries(response)) {
@@ -110,6 +110,7 @@ async function main() {
   success('update lock done');
 
   await bash('npm version', [args.version]);
+  success('So long and thanks for all the fish! 🐬');
 }
 
 main();

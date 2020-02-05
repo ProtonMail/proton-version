@@ -1,5 +1,6 @@
 const prompts = require('prompts');
 const execa = require('execa');
+const dedent = require('dedent');
 
 const args = require('./lib/args');
 const { bash } = require('./lib/cli');
@@ -9,56 +10,93 @@ const { logCommit, success, log, warn } = require('./lib/log')('proton-version')
 async function main() {
 
   const localConfig = getLocalProjects();
-  // const promises = Object.entries(localConfig).map(async ([ dependency, local ]) => ({
-  //   dependency,
-  //   remote: await getCommits(dependency),
-  //   local
-  // }));
+  const promises = Object.entries(localConfig).map(async ([ dependency, local ]) => ({
+    dependency,
+    remote: await getCommits(dependency),
+    local
+  }));
 
-  // const data = await Promise.all(promises);
-  // success('fetch commits from API');
+  const data = await Promise.all(promises);
+  success('fetch commits from API');
 
-  // const questions = data.reduce((acc, { dependency, remote, local }) => {
-  //   const latestLocal = remote.find(({ sha }) => sha === local.commit);
-  //   const [ latestRemote ] = remote;
-  //   if (latestLocal && latestLocal.sha !== latestRemote.sha) {
-  //     acc.push({
-  //       type: 'confirm',
-  //       name: dependency,
-  //       message: `[${dependency}] is not up-to-date, do you want to update it (default: true)?`,
-  //       initial: true,
-  //       onRender() {
-  //         logCommit('latestLocal', latestLocal);
-  //         logCommit('latestRemote', latestRemote);
-  //       }
-  //     });
-  //   }
-  //   return acc;
-  // }, []);
+  return console.log(JSON.stringify(data, null, 2));
 
-  // const response = await prompts(questions);
 
-  const response ={
-    'design-system': true,
-    pmcrypto: true,
-    'proton-shared': false,
-    'react-components': false
-  };
+  const questions = data.reduce((acc, { dependency, remote, local }) => {
+    const latestLocal = remote.find(({ sha }) => sha === local.commit);
+    const [ latestRemote ] = remote;
+    if (latestLocal && latestLocal.sha !== latestRemote.sha) {
+      acc.push({
+        type: 'confirm',
+        name: dependency,
+        message: `[${dependency}] is not up-to-date, do you want to update it (default: true)?`,
+        initial: true,
+        onRender() {
+          logCommit('latestLocal', latestLocal);
+          logCommit('latestRemote', latestRemote);
+        }
+      });
+    }
+    return acc;
+  }, []);
+
+  const response = await prompts(questions);
+
+  // const response ={
+  //   'design-system': true,
+  //   pmcrypto: true,
+  //   'proton-shared': false,
+  //   'react-components': false
+  // };
 
   const { stdout } = await bash(`find node_modules -maxdepth 1 -type l`);
   const activeNpmLinks = stdout.split('\n').filter(Boolean);
   if (activeNpmLinks.length) {
-    warn(`we detected active npm links, we are unlinking them`, activeNpmLinks.join('\n'));
-    process.exit(0)
+    const removeLinks = await prompts({
+        type: 'confirm',
+        name: 'unlink',
+        message: `we need to unlink, do you confirm?`,
+        initial: true,
+        onRender() {
+          const links = activeNpmLinks.join('\n')
+          const msg = dedent`we detected active npm links,
+          It is impossible to update the package-lock.json if we have active links, so we need to run:
+
+          $ rm -rf node_modules/<dependencyn>
+          > npm uninstall --no-save <dependency> should work, yet Error [0] ¯\_(ツ)_/¯
+
+          We are going to unlink them for you in order to be able to update your dependencies.
+          Active npm link detected:`;
+          warn(msg, activeNpmLinks.map((name) => ' -' + name).join('\n'));
+        }
+      });
+
+    if (!removeLinks.unlink) {
+      log('stopping the process');
+      process.exit(0);
+    }
+
+    log('unlinking dependencies');
+
+    for (const link of activeNpmLinks) {
+      await bash('rm -rf', [link]);
+      success(`unlinking ${link}`);
+    }
   }
 
-  for ([dependency, runUpdate] of Object.entries(response)) {
-    log(`updating ${dependency}`);
-    await bash('npm update', [dependency], 'inherit');
-    success(`update ${dependency}`);
-  }
 
-  return console.log(response)
+  if (Object.values(response).filter(Boolean).length){
+
+    for (const [dependency, runUpdate] of Object.entries(response)) {
+      if (runUpdate) {
+        log(`updating ${dependency}`)
+        await bash('npm update', [dependency]);
+        success(`update ${dependency}`);
+      }
+    }
+
+    success('update done');
+  }
 
 }
 

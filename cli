@@ -5,11 +5,34 @@ const dedent = require('dedent');
 const args = require('./lib/args');
 const { bash, script } = require('./lib/cli');
 const { getCommits, getLocalProjects } = require('./lib/utils');
-const { logCommit, success, log, warn } = require('./lib/log')('proton-version');
+const { logCommit, success, log, warn, debug } = require('./lib/log')('proton-version');
+
+/*
+  Flow:
+    - 1 we look for our current installed dependencies
+    - 2 we contact the API to get the latest available
+    - 3 we compute the diff and display
+      - we found 3 updates availble for X,Y,Z, do you want to see the diff ?
+      if yes we display diff localLog vs remote log
+    - 4 do you want to update ? (none, all, select)
+    Flow: All
+      - we update everything
+      - we commit the lock
+      - we create the version
+    Flow: None
+      - we create the new version
+    Flow: Select
+      - we display a list of options to select
+      - we update only the selected options
+      - we commit the lock
+      - we create the version
+ */
 
 async function main() {
 
+  debug(args);
   const localConfig = getLocalProjects();
+  return debug(localConfig);
   const promises = Object.entries(localConfig).map(async ([ dependency, local ]) => ({
     dependency,
     remote: await getCommits(dependency),
@@ -19,7 +42,7 @@ async function main() {
   const data = await Promise.all(promises);
   success('fetch commits from API');
 
-  const data = require('./all2.json');
+  // const data = require('./all2.json');
 
   const questions = data.reduce((acc, { dependency, remote, local }) => {
     const latestLocal = remote.find(({ sha }) => sha === local.commit);

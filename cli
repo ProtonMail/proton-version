@@ -1,5 +1,65 @@
 const prompts = require('prompts');
 const execa = require('execa');
-const args = require('./lib/args');
 
-console.log(args)
+const args = require('./lib/args');
+const { bash } = require('./lib/cli');
+const { getCommits, getLocalProjects } = require('./lib/utils');
+const { logCommit, success, log, warn } = require('./lib/log')('proton-version');
+
+async function main() {
+
+  const localConfig = getLocalProjects();
+  // const promises = Object.entries(localConfig).map(async ([ dependency, local ]) => ({
+  //   dependency,
+  //   remote: await getCommits(dependency),
+  //   local
+  // }));
+
+  // const data = await Promise.all(promises);
+  // success('fetch commits from API');
+
+  // const questions = data.reduce((acc, { dependency, remote, local }) => {
+  //   const latestLocal = remote.find(({ sha }) => sha === local.commit);
+  //   const [ latestRemote ] = remote;
+  //   if (latestLocal && latestLocal.sha !== latestRemote.sha) {
+  //     acc.push({
+  //       type: 'confirm',
+  //       name: dependency,
+  //       message: `[${dependency}] is not up-to-date, do you want to update it (default: true)?`,
+  //       initial: true,
+  //       onRender() {
+  //         logCommit('latestLocal', latestLocal);
+  //         logCommit('latestRemote', latestRemote);
+  //       }
+  //     });
+  //   }
+  //   return acc;
+  // }, []);
+
+  // const response = await prompts(questions);
+
+  const response ={
+    'design-system': true,
+    pmcrypto: true,
+    'proton-shared': false,
+    'react-components': false
+  };
+
+  const { stdout } = await bash(`find node_modules -maxdepth 1 -type l`);
+  const activeNpmLinks = stdout.split('\n').filter(Boolean);
+  if (activeNpmLinks.length) {
+    warn(`we detected active npm links, we are unlinking them`, activeNpmLinks.join('\n'));
+    process.exit(0)
+  }
+
+  for ([dependency, runUpdate] of Object.entries(response)) {
+    log(`updating ${dependency}`);
+    await bash('npm update', [dependency], 'inherit');
+    success(`update ${dependency}`);
+  }
+
+  return console.log(response)
+
+}
+
+main();

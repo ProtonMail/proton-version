@@ -1,0 +1,5 @@
+const prompts = require('prompts');
+const execa = require('execa');
+const args = require('./lib/args');
+
+console.log(args)

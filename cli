@@ -33,7 +33,6 @@ async function main() {
 
   debug(args);
   const data = await getDependenciesConfig();
-  success('fetch commits from API');
   const rep = await questions(data);
   return console.log(rep)
 

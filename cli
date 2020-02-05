@@ -4,7 +4,8 @@ const dedent = require('dedent');
 
 const args = require('./lib/args');
 const { bash, script } = require('./lib/cli');
-const { getCommits, getLocalProjects } = require('./lib/utils');
+const { getDependenciesConfig } = require('./lib/utils');
+const questions = require('./lib/questions');
 const { logCommit, success, log, warn, debug } = require('./lib/log')('proton-version');
 
 /*
@@ -31,42 +32,10 @@ const { logCommit, success, log, warn, debug } = require('./lib/log')('proton-ve
 async function main() {
 
   debug(args);
-  const localConfig = getLocalProjects();
-  return debug(localConfig);
-  const promises = Object.entries(localConfig).map(async ([ dependency, local ]) => ({
-    dependency,
-    remote: await getCommits(dependency),
-    local
-  }));
-
-  const data = await Promise.all(promises);
+  const data = await getDependenciesConfig();
   success('fetch commits from API');
-
-  // const data = require('./all2.json');
-
-  const questions = data.reduce((acc, { dependency, remote, local }) => {
-    const latestLocal = remote.find(({ sha }) => sha === local.commit);
-    const [ latestRemote ] = remote;
-    if (latestLocal && latestLocal.sha !== latestRemote.sha) {
-      acc.push({
-        type: 'confirm',
-        name: dependency,
-        message: `[${dependency}] is not up-to-date, do you want to update it (default: true)?`,
-        initial: true,
-        alreadyPrint: false,
-        onRender() {
-          // Because MacOS will print twice...
-          if (this.alreadyPrint) {
-            return;
-          }
-          logCommit('latestLocal', latestLocal);
-          logCommit('latestRemote', latestRemote);
-          this.alreadyPrint = true;
-        }
-      });
-    }
-    return acc;
-  }, []);
+  const rep = await questions(data);
+  return console.log(rep)
 
   /*
    Ex: output

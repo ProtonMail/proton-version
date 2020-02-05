@@ -4,3 +4,4 @@ node_modules
 test/compile/*.json
 test/output-valid.log
 test/output-broken.log
+.DS_Store

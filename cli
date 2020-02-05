@@ -3,24 +3,25 @@ const execa = require('execa');
 const dedent = require('dedent');
 
 const args = require('./lib/args');
-const { bash } = require('./lib/cli');
+const { bash, script } = require('./lib/cli');
 const { getCommits, getLocalProjects } = require('./lib/utils');
 const { logCommit, success, log, warn } = require('./lib/log')('proton-version');
 
 async function main() {
 
-  const localConfig = getLocalProjects();
-  const promises = Object.entries(localConfig).map(async ([ dependency, local ]) => ({
-    dependency,
-    remote: await getCommits(dependency),
-    local
-  }));
+  // const localConfig = getLocalProjects();
+  // const promises = Object.entries(localConfig).map(async ([ dependency, local ]) => ({
+  //   dependency,
+  //   remote: await getCommits(dependency),
+  //   local
+  // }));
 
-  const data = await Promise.all(promises);
+  // const data = await Promise.all(promises);
   success('fetch commits from API');
 
-  return console.log(JSON.stringify(data, null, 2));
+  // return console.log(JSON.stringify(data, null, 2));
 
+  const data = require('./all2.json');
 
   const questions = data.reduce((acc, { dependency, remote, local }) => {
     const latestLocal = remote.find(({ sha }) => sha === local.commit);
@@ -31,17 +32,24 @@ async function main() {
         name: dependency,
         message: `[${dependency}] is not up-to-date, do you want to update it (default: true)?`,
         initial: true,
+        alreadyPrint: false,
         onRender() {
+          // Because MacOS will print twice...
+          if (this.alreadyPrint) {
+            return;
+          }
           logCommit('latestLocal', latestLocal);
           logCommit('latestRemote', latestRemote);
+          this.alreadyPrint = true;
         }
       });
     }
     return acc;
   }, []);
 
-  const response = await prompts(questions);
 
+  const response = await prompts(questions);
+  // return console.log(response)
   // const response ={
   //   'design-system': true,
   //   pmcrypto: true,
@@ -98,6 +106,10 @@ async function main() {
     success('update done');
   }
 
+  await script('updatePackageLock.sh');
+  success('update lock done');
+
+  await bash('npm version', [args.version]);
 }
 
 main();

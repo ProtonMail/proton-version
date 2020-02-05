@@ -1,0 +1,11 @@
+version: 2
+jobs:
+   build:
+     docker:
+       - image: circleci/node:lts
+     steps:
+       - run: sudo apt-get install -y gawk
+       - checkout
+       - run: npm ci
+       - run: npm run lint
+       - run: npm test

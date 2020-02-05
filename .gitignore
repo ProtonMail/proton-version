@@ -1,0 +1,6 @@
+node_modules
+.eslintcache
+.env
+test/compile/*.json
+test/output-valid.log
+test/output-broken.log

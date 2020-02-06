@@ -1,12 +1,12 @@
-const prompts = require('prompts');
-const execa = require('execa');
-const dedent = require('dedent');
-
 const args = require('./lib/args');
-const { bash, script } = require('./lib/cli');
+const { bash } = require('./lib/cli');
+const { PKG_VERSION } = require('./lib/config');
 const { getDependenciesConfig } = require('./lib/utils');
 const questions = require('./lib/questions');
-const { logCommit, success, log, warn, debug } = require('./lib/log')('proton-version');
+const manageNpmLinks = require('./lib/npmLink');
+const npmVersion = require('./lib/npmVersion');
+const { updateDependencies, updateLock } = require('./lib/updateDependencies');
+const { success, debug, log } = require('./lib/log')('proton-version');
 
 /*
   Flow:
@@ -28,80 +28,23 @@ const { logCommit, success, log, warn, debug } = require('./lib/log')('proton-ve
       - we commit the lock
       - we create the version
  */
-
 async function main() {
 
   debug(args);
-  const data = await getDependenciesConfig();
-  const rep = await questions(data);
-  return console.log(rep)
+  log(`current version ${PKG_VERSION} - we will create a new ${args.version}`);
 
-  /*
-   Ex: output
-    {
-      'design-system': true,
-      pmcrypto: true,
-      'proton-shared': false,
-      'react-components': false
-    }
-   */
-  const response = await prompts(questions);
+  // Detect what we can update and ask you question. To ignore it use --all
+  const dependenciesToUpdate = await questions(await getDependenciesConfig());
 
-  // Find active npm links
-  const { stdout } = await bash(`find node_modules -maxdepth 1 -type l`);
-  const activeNpmLinks = stdout.split('\n').filter(Boolean);
-  if (activeNpmLinks.length) {
-    const removeLinks = await prompts({
-        type: 'confirm',
-        name: 'unlink',
-        message: `we need to unlink, do you confirm?`,
-        initial: true,
-        onRender() {
-          const links = activeNpmLinks.join('\n')
-          const msg = dedent`we detected active npm links,
-          It is impossible to update the package-lock.json if we have active links, so we need to run:
+  debug(dependenciesToUpdate);
 
-          $ rm -rf node_modules/<dependencyn>
-          > npm uninstall --no-save <dependency> should work, yet Error [0] ¯\_(ツ)_/¯
+  // Detect active npm link and asks you what we need to do
+  await manageNpmLinks();
+  await updateDependencies(dependenciesToUpdate);
+  await updateLock();
+  await npmVersion(args.version);
 
-          We are going to unlink them for you in order to be able to update your dependencies.
-          Active npm link detected:`;
-          warn(msg, activeNpmLinks.map((name) => ' -' + name).join('\n'));
-        }
-      });
-
-    if (!removeLinks.unlink) {
-      log('stopping the process');
-      process.exit(0);
-    }
-
-    log('unlinking dependencies');
-
-    for (const link of activeNpmLinks) {
-      await bash('rm -rf', [link]);
-      success(`unlinking ${link}`);
-    }
-  }
-
-  // Houston, we have something to update
-  if (Object.values(response).filter(Boolean).length){
-
-    for (const [dependency, runUpdate] of Object.entries(response)) {
-      if (runUpdate) {
-        log(`updating ${dependency}`)
-        await bash('npm update', [dependency]);
-        success(`update ${dependency}`);
-      }
-    }
-
-    success('update done');
-  }
-
-  await script('updatePackageLock.sh');
-  success('update lock done');
-
-  await bash('npm version', [args.version]);
-  success('So long and thanks for all the fish! 🐬');
+  success('So long, and thanks for all the fish! 🐬');
 }
 
 main();

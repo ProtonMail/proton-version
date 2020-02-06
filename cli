@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 const args = require('./lib/args');
 const { bash } = require('./lib/cli');
 const { PKG_VERSION } = require('./lib/config');
@@ -29,7 +31,6 @@ const { success, debug, log } = require('./lib/log')('proton-version');
       - we create the version
  */
 async function main() {
-
   debug(args);
   log(`current version ${PKG_VERSION} - we will create a new ${args.version}`);
 

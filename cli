@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 const args = require('./lib/args');
-const { bash } = require('./lib/cli');
 const { PKG_VERSION } = require('./lib/config');
 const { getDependenciesConfig } = require('./lib/utils');
 const questions = require('./lib/questions');

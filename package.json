@@ -6,7 +6,8 @@
   "scripts": {
     "preversion": "npm run follow:lock",
     "postversion": "npm run unfollow:lock && git push --tags && git push",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo 123",
+    "lint": "eslint  $(find lib cli -type f -name '*.js')"
   },
   "keywords": [],
   "author": "",
@@ -18,6 +19,15 @@
     "prompts": "^2.3.0"
   },
   "devDependencies": {
+    "babel-eslint": "^10.0.3",
+    "eslint": "^6.6.0",
+    "eslint-config-airbnb-base": "^14.0.0",
+    "eslint-config-react-app": "^5.1.0",
+    "eslint-plugin-flowtype": "^4.3.0",
+    "eslint-plugin-import": "^2.18.2",
+    "eslint-plugin-jsx-a11y": "^6.2.3",
+    "eslint-plugin-react": "^7.16.0",
+    "eslint-plugin-react-hooks": "^2.3.0",
     "husky": "^4.2.1",
     "lint-staged": "^10.0.7",
     "prettier": "^1.19.1"

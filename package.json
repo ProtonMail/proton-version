@@ -3,9 +3,11 @@
   "version": "0.0.1",
   "description": "Create a new version and upgrade dependencies",
   "main": "index.js",
+  "bin": {
+    "proton-version": "cli"
+  },
   "scripts": {
-    "preversion": "npm run follow:lock",
-    "postversion": "npm run unfollow:lock && git push --tags && git push",
+    "postversion": "git push --tags && git push",
     "test": "echo 123",
     "lint": "eslint  $(find lib cli -type f -name '*.js')"
   },

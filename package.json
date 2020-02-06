@@ -1,9 +1,11 @@
 {
   "name": "proton-version",
-  "version": "1.0.0",
-  "description": "",
+  "version": "0.0.1",
+  "description": "Create a new version and upgrade dependencies",
   "main": "index.js",
   "scripts": {
+    "preversion": "npm run follow:lock",
+    "postversion": "npm run unfollow:lock && git push --tags && git push",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -14,5 +16,21 @@
     "execa": "^4.0.0",
     "kleur": "^3.0.3",
     "prompts": "^2.3.0"
+  },
+  "devDependencies": {
+    "husky": "^4.2.1",
+    "lint-staged": "^10.0.7",
+    "prettier": "^1.19.1"
+  },
+  "lint-staged": {
+    "*.js": [
+      "prettier --write",
+      "git add"
+    ]
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
   }
 }

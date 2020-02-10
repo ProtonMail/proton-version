@@ -1,6 +1,6 @@
 {
   "name": "proton-version",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Create a new version and upgrade dependencies",
   "main": "index.js",
   "bin": {
